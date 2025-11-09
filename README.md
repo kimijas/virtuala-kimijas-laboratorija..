@@ -1,1 +1,0 @@
-# virtuala-kimijas-laboratorija..
