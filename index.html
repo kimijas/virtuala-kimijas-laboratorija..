@@ -1,0 +1,134 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Virtual Chemistry Lab — Full English Version</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#f3fbff;--accent:#0066cc;--card:#fff;--muted:#6b7b8b}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial;background:linear-gradient(180deg,var(--bg),#eaf6ff);color:#03396c}
+header{background:linear-gradient(90deg,var(--accent),#004a8f);color:white;padding:12px 16px;text-align:center;font-size:1.1rem}
+.container{display:flex;gap:12px;padding:12px;flex-wrap:wrap;justify-content:center}
+.board{width:720px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,80,140,0.08)}
+.side{width:320px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,80,140,0.06)}
+.grid{display:grid;grid-template-columns:repeat(6,64px);gap:8px;padding:8px}
+.tile{width:64px;height:64px;border-radius:10px;background:linear-gradient(180deg,#fff,#f4fbff);border:1px solid #d7ecff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;gap:4px}
+.controls{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.btn{padding:8px 10px;border-radius:8px;border:1px solid var(--accent);background:white;color:var(--accent);cursor:pointer}
+.result{margin-top:10px;padding:10px;border-radius:8px;background:#fbffff;border:1px solid #eef6ff;min-height:140px;overflow:auto}
+.equip{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:#f0fbff;border:1px solid #d7ecff}
+.anim{height:100px;position:relative;overflow:hidden;margin-top:8px}
+.footer{text-align:center;padding:10px;color:var(--muted);font-size:13px}
+img.icon{width:28px;height:28px}
+.equation{background:#f6fdff;border:1px dashed #dff4ff;padding:8px;border-radius:8px;margin-top:8px;font-family:monospace}
+@keyframes rise{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-140px);opacity:0}}
+</style>
+</head>
+<body>
+<header>Virtual Chemistry Lab — Full English Version</header>
+<div class="container">
+  <div class="board">
+    <h3>Substances & Compounds</h3>
+    <div id="ptable" class="grid" role="grid" aria-label="periodic table"></div>
+    <div class="controls">
+      <label>Action: <select id="operation"><option value="info">Info</option><option value="mix">Mix</option><option value="heat">Heat</option><option value="burn">Burn</option><option value="electrolyze">Electrolyze</option><option value="oxidize">Oxidize</option></select></label>
+      <button id="do" class="btn">Perform</button>
+      <button id="clear" class="btn">Clear</button>
+      <button id="langBtn" class="btn">Switch to Latvian</button>
+    </div>
+    <div class="small">Click substances/compounds to select them, then choose an action.</div>
+  </div>
+  <div class="side">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:84px;height:84px;border-radius:14px;background:linear-gradient(135deg,#0077d6,#0056a0);display:flex;align-items:center;justify-content:center;color:white;font-size:40px">🧑‍🔬</div>
+      <div><div id="avatarText"><strong>Hello!</strong> Click a substance to see properties.</div><div style="margin-top:6px">Score: <strong id="score">0</strong></div></div>
+    </div>
+    <h4 style="margin-top:12px">Equipment & Safety</h4>
+    <div id="equipment" class="equip"></div>
+    <div id="result" class="result">Results will appear here.</div>
+    <div class="anim" id="animArea"></div>
+  </div>
+</div>
+<div class="footer">For educational purposes only. Perform real experiments only under teacher supervision.</div>
+
+<script>
+const DATA = {"substances": [{"symbol": "H", "name": "Hydrogen", "lv_name": "Ūdeņradis", "state": "gas", "density": "0.0899 g/L", "mp": "−259.2 °C", "bp": "−252.9 °C", "chem": "light, flammable", "fact": "Most abundant element in the Universe", "img": "img/drop.svg"}, {"symbol": "O", "name": "Oxygen", "lv_name": "Skābeklis", "state": "gas", "density": "1.429 g/L", "mp": "−218.8 °C", "bp": "−183 °C", "chem": "strong oxidizer", "fact": "Required for respiration", "img": "img/drop.svg"}, {"symbol": "Na", "name": "Sodium", "lv_name": "Nātrijs", "state": "solid", "density": "0.97 g/cm³", "mp": "97.8 °C", "chem": "reacts violently with water", "fact": "Alkali metal", "img": "img/flask.svg"}, {"symbol": "Cl", "name": "Chlorine", "lv_name": "Hlors", "state": "gas", "density": "3.214 g/L", "mp": "−101.5 °C", "chem": "strong oxidizing gas", "fact": "Used for disinfection (toxic)", "img": "img/drop.svg"}, {"symbol": "NaOH", "name": "Sodium hydroxide", "lv_name": "Nātrija hidroksīds", "state": "solid", "density": "2.13 g/cm³", "mp": "318 °C", "chem": "strong base", "fact": "Used in soap making", "img": "img/flask.svg"}, {"symbol": "HCl", "name": "Hydrochloric acid", "lv_name": "Sālsskābe", "state": "aqueous", "density": "1.18 g/cm³ (37%)", "chem": "strong acid", "fact": "Common laboratory acid", "img": "img/drop.svg"}, {"symbol": "H2O", "name": "Water", "lv_name": "Ūdens", "state": "liquid", "density": "1 g/cm³", "mp": "0 °C", "bp": "100 °C", "chem": "universal solvent", "fact": "Essential for life", "img": "img/drop.svg"}, {"symbol": "C2H5OH", "name": "Ethanol", "lv_name": "Etanols", "state": "liquid", "density": "0.789 g/cm³", "mp": "−114 °C", "bp": "78 °C", "chem": "flammable alcohol", "fact": "Used as a solvent and fuel", "img": "img/drop.svg"}, {"symbol": "Cu", "name": "Copper", "lv_name": "Varš", "state": "solid", "density": "8.96 g/cm³", "mp": "1085 °C", "chem": "oxidizes to green compounds", "fact": "Good electrical conductor", "img": "img/flask.svg"}, {"symbol": "CaCO3", "name": "Calcium carbonate", "lv_name": "Kalcija karbonāts", "state": "solid", "density": "2.71 g/cm³", "chem": "decomposes on heating to CO2", "fact": "Found in marble and shells", "img": "img/flask.svg"}, {"symbol": "NH3", "name": "Ammonia", "lv_name": "Amonjaks", "state": "gas", "density": "0.73 g/L", "chem": "basic gas", "fact": "Used in fertilizers", "img": "img/drop.svg"}, {"symbol": "NaCl", "name": "Sodium chloride", "lv_name": "Nātrija hlorīds", "state": "solid", "density": "2.16 g/cm³", "chem": "ionic compound (salt)", "fact": "Table salt", "img": "img/drop.svg"}, {"symbol": "CO2", "name": "Carbon dioxide", "lv_name": "Oglekļa dioksīds", "state": "gas", "density": "1.977 g/L", "chem": "non-flammable gas", "fact": "Produced in respiration and combustion", "img": "img/drop.svg"}, {"symbol": "Fe", "name": "Iron", "lv_name": "Dzelzs", "state": "solid", "density": "7.87 g/cm³", "mp": "1538 °C", "chem": "oxidizes (rusts)", "fact": "Structural metal", "img": "img/flask.svg"}, {"symbol": "CuSO4", "name": "Copper(II) sulfate", "lv_name": "Varš(II) sulfāts", "state": "solid", "density": "3.6 g/cm³", "chem": "toxic blue crystals", "fact": "Used in agriculture", "img": "img/flask.svg"}, {"symbol": "Na2CO3", "name": "Sodium carbonate", "lv_name": "Nātrija karbonāts", "state": "solid", "chem": "basic salt", "fact": "Used in washing powders", "img": "img/flask.svg"}, {"symbol": "KNO3", "name": "Potassium nitrate", "lv_name": "Kālija nitrāts", "state": "solid", "chem": "oxidizer", "fact": "Used in fertilizers and pyrotechnics", "img": "img/flask.svg"}, {"symbol": "H2O2", "name": "Hydrogen peroxide (3%)", "lv_name": "Ūdeņraža peroksīds", "state": "liquid", "density": "1.11 g/cm³ (3%)", "chem": "oxidizer", "fact": "Used for bleaching and disinfection", "img": "img/drop.svg"}, {"symbol": "NaHCO3", "name": "Sodium bicarbonate", "lv_name": "Nātrija bikarbonāts", "state": "solid", "chem": "mild base", "fact": "Baking soda", "img": "img/flask.svg"}, {"symbol": "CH3COOH", "name": "Acetic acid (vinegar)", "lv_name": "Etiķskābe", "state": "liquid", "density": "1.05 g/cm³", "chem": "weak organic acid", "fact": "Found in vinegar", "img": "img/drop.svg"}], "equipment": [{"id": "flask", "name": "Flask", "lv": "Kolba", "img": "img/flask.svg"}, {"id": "beaker", "name": "Beaker", "lv": "Mērkolba", "img": "img/beaker.svg"}, {"id": "bunsen", "name": "Bunsen burner", "lv": "Bunsena deglis", "img": "img/bunsen.svg"}, {"id": "tube", "name": "Test tube", "lv": "Testa caurule", "img": "img/tube.svg"}, {"id": "goggles", "name": "Goggles", "lv": "Aizsargbrilles", "img": "img/goggles.svg"}, {"id": "gloves", "name": "Gloves", "lv": "Cimdi", "img": "img/gloves.svg"}, {"id": "hood", "name": "Fume hood", "lv": "Vilkmes skapis", "img": "img/hood.svg"}], "reactions": [{"found": true, "name": "Sodium + Water (dangerous)", "lv_name": "Nātrijs + Ūdens (bīstami)", "reagents": ["Na", "H2O"], "operation": "mix", "products": ["NaOH", "H2"], "equations": ["2 Na + 2 H2O → 2 NaOH + H2 ↑"], "equipment": ["Bunsen burner (or safe bench)", "Fume hood"], "safety": ["Gloves", "Goggles"], "explanation_en": "Alkali metals react vigorously with water producing hydroxide and hydrogen gas.", "explanation_lv": "Alkālmetāli reaģē spēcīgi ar ūdeni, rodas sārms un ūdeņradis."}, {"found": true, "name": "Neutralization: NaOH + HCl", "lv_name": "Neitralizācija: NaOH + HCl", "reagents": ["NaOH", "HCl"], "operation": "mix", "products": ["NaCl", "H2O"], "equations": ["NaOH + HCl → NaCl + H2O"], "equipment": ["Beaker", "Glass rod"], "safety": ["Goggles", "Gloves"], "explanation_en": "Classic acid-base neutralization producing salt and water.", "explanation_lv": "Skābes un bāzes neitralizācija — sāls un ūdens veidošanās."}, {"found": true, "name": "Ammonia + HCl → NH4Cl (white cloud)", "lv_name": "NH3 + HCl → NH4Cl (balts mākonis)", "reagents": ["NH3", "HCl"], "operation": "mix", "products": ["NH4Cl"], "equations": ["NH3 + HCl → NH4Cl"], "equipment": ["Test tube"], "safety": ["Goggles"], "explanation_en": "Mixing ammonia gas with HCl forms white ammonium chloride aerosol.", "explanation_lv": "Amonjaks un sālsskābe veido baltu mākoni."}, {"found": true, "name": "Electrolysis of water", "lv_name": "Ūdens elektrolīze", "reagents": ["H2O"], "operation": "electrolyze", "products": ["H2", "O2"], "equations": ["2 H2O → 2 H2 + O2 (electrolysis)"], "equipment": ["Electrodes", "Power source"], "safety": ["Goggles"], "explanation_en": "Water decomposes into hydrogen and oxygen under electric current.", "explanation_lv": "Ūdens sadalās, kad tiek pielietota elektrība."}, {"found": true, "name": "Ethanol combustion", "lv_name": "Etanola degšana", "reagents": ["C2H5OH", "O"], "operation": "burn", "products": ["CO2", "H2O"], "equations": ["C2H5OH + 3 O2 → 2 CO2 + 3 H2O"], "equipment": ["Heat-resistant dish"], "safety": ["Fire extinguisher", "Goggles"], "explanation_en": "Ethanol burns producing carbon dioxide and water.", "explanation_lv": "Etanols degt gaisā."}, {"found": true, "name": "Calcium carbonate decomposition", "lv_name": "CaCO3 → CaO + CO2", "reagents": ["CaCO3"], "operation": "heat", "products": ["CaO", "CO2"], "equations": ["CaCO3 → CaO + CO2 ↑"], "equipment": ["Hot plate"], "safety": ["Goggles"], "explanation_en": "Thermal decomposition of calcium carbonate yields lime and carbon dioxide.", "explanation_lv": "Termiskā dekompozīcija."}, {"found": true, "name": "Copper + Sulfuric acid (hot)", "lv_name": "Cu + H2SO4 (karsts)", "reagents": ["Cu", "H2SO4"], "operation": "heat", "products": ["CuSO4", "SO2", "H2O"], "equations": ["Cu + 2 H2SO4 → CuSO4 + SO2 ↑ + 2 H2O"], "equipment": ["Flask", "Hot plate"], "safety": ["Fume hood", "Goggles"], "explanation_en": "Copper reacts with hot concentrated sulfuric acid producing sulfate and sulfur dioxide.", "explanation_lv": "Metāls reaģē ar karstu sērskābi."}, {"found": true, "name": "Copper sulfate + Iron displacement", "lv_name": "CuSO4 + Fe → FeSO4 + Cu", "reagents": ["CuSO4", "Fe"], "operation": "mix", "products": ["FeSO4", "Cu"], "equations": ["CuSO4 + Fe → FeSO4 + Cu"], "equipment": ["Beaker"], "safety": ["Gloves", "Goggles"], "explanation_en": "A displacement reaction where iron replaces copper in solution.", "explanation_lv": "Metālu izspiešanas reakcija."}]};
+
+// game state
+let selected = new Set();
+let score = parseInt(localStorage.getItem('chem_score')||'0');
+let lang = 'en';
+
+function renderTable(){
+  const p = document.getElementById('ptable'); p.innerHTML='';
+  DATA.substances.forEach(s=>{
+    const d = document.createElement('div'); d.className='tile'; d.dataset.id = s.symbol;
+    d.innerHTML = `<img class="icon" src="img/${s.img.replace('img/','')}" alt=""><div class="sym">${s.symbol}</div>`;
+    d.onclick = ()=>{ showInfo(s); toggleSelect(s.symbol); };
+    p.appendChild(d);
+  });
+}
+
+function renderEquipment(){
+  const eq = document.getElementById('equipment'); eq.innerHTML='';
+  DATA.equipment.forEach(it=>{
+    const div = document.createElement('div'); div.className='chip';
+    div.innerHTML = `<img class="icon" src="img/${it.img.replace('img/','')}" alt=""><div><strong>${it.name}</strong><div style="font-size:12px;color:#557">${it.lv}</div></div>`;
+    eq.appendChild(div);
+  });
+}
+
+function showInfo(s){
+  const title = lang==='en' ? s.name : (s.lv_name || s.name);
+  const fact = s.fact;
+  const chem = s.chem;
+  const html = `<strong>${title} (${s.symbol})</strong><div style="margin-top:6px"><em>${fact}</em></div><div style="margin-top:6px"><strong>State:</strong> ${s.state} • <strong>Density:</strong> ${s.density || '—'} • <strong>Melting point:</strong> ${s.mp || '—'}</div><div style="margin-top:6px"><strong>Chemical properties:</strong> ${chem}</div>`;
+  document.getElementById('avatarText').innerHTML = html;
+  speakText(title + '. ' + fact);
+}
+
+function toggleSelect(id){
+  if(selected.has(id)) selected.delete(id); else selected.add(id);
+  document.querySelectorAll('.tile').forEach(t=> t.classList.toggle('selected', selected.has(t.dataset.id)));
+  document.getElementById('result').textContent = (lang==='en'?'Selected: ':'Izvēlēts: ') + Array.from(selected).join(', ');
+}
+
+document.getElementById('do').addEventListener('click', perform);
+document.getElementById('clear').addEventListener('click', ()=>{ selected.clear(); document.querySelectorAll('.tile').forEach(t=>t.classList.remove('selected')); document.getElementById('result').innerHTML=''; });
+document.getElementById('langBtn').addEventListener('click', ()=>{ lang = (lang==='en'?'lv':'en'); document.getElementById('langBtn').textContent = (lang==='en'?'Switch to Latvian':'Switch to English'); renderTable(); renderEquipment(); });
+
+function perform(){
+  const op = document.getElementById('operation').value;
+  const sel = Array.from(selected);
+  let matched = DATA.reactions.find(r=> arraysEqual((r.reagents||[]).slice().sort(), sel.slice().sort()) && (r.operation? r.operation.toLowerCase()===op.toLowerCase() : true));
+  if(!matched){ matched = DATA.reactions.find(r=> arraysEqual((r.reagents||[]).slice().sort(), sel.slice().sort())); }
+  const res = document.getElementById('result'); const anim = document.getElementById('animArea'); anim.innerHTML='';
+  if(!matched){ res.innerHTML = '<b>' + (lang==='en'?'No known reaction for this combination.':'Nav zināma reakcija šai kombinācijai.') + '</b>'; playSound('fail'); return; }
+  const title = lang==='en' ? matched.name : (matched.lv_name || matched.name);
+  const explanation = lang==='en' ? matched.explanation_en || matched.explanation_lv : matched.explanation_lv || matched.explanation_en;
+  let html = `<strong>${title}</strong><div style="margin-top:6px"><em>${explanation}</em></div>`;
+  if(matched.equations) html += `<div style="margin-top:6px"><strong>Equations:</strong><div class="equation">${matched.equations.join('<br>')}</div></div>`;
+  if(matched.products) html += `<div style="margin-top:6px"><strong>Products:</strong> ${matched.products.join(', ')}</div>`;
+  if(matched.equipment) html += `<div style="margin-top:6px"><strong>Equipment:</strong> ${matched.equipment.join(', ')}</div>`;
+  if(matched.safety) html += `<div style="margin-top:6px"><strong>Safety:</strong><ul>${matched.safety.map(s=>'<li>'+s+'</li>').join('')}</ul></div>`;
+  res.innerHTML = html;
+  if((matched.operation||'').toLowerCase()==='burn'){ createFlame(sel); playSound('flame'); addScore(10); }
+  else if((matched.operation||'').toLowerCase()==='electrolyze'){ createBubbles(); playSound('bubbles'); addScore(8); }
+  else if((matched.operation||'').toLowerCase()==='heat'){ createBubbles(); playSound('heat'); addScore(6); }
+  else { createBubbles(); playSound('mix'); addScore(4); }
+}
+
+function arraysEqual(a,b){ return a.slice().sort().join(',') === b.slice().sort().join(','); }
+function createBubbles(){ const area=document.getElementById('animArea'); for(let i=0;i<8;i++){ const b=document.createElement('div'); b.style.position='absolute'; b.style.bottom='0'; b.style.left=(Math.random()*80)+'%'; const s=6+Math.random()*18; b.style.width=s+'px'; b.style.height=s+'px'; b.style.borderRadius='50%'; b.style.background='rgba(0,150,255,0.18)'; area.appendChild(b); setTimeout(()=>b.remove(),3500); } }
+function createFlame(sel){ const area=document.getElementById('animArea'); const f=document.createElement('div'); f.style.width='80px'; f.style.height='80px'; f.style.borderRadius='50%'; f.style.background='radial-gradient(circle at 30% 30%,#ff9a00 10%,#ff3 40%,rgba(255,255,255,0) 60%)'; f.style.filter='blur(6px)'; area.appendChild(f); setTimeout(()=>f.remove(),3000); colorFlash(sel); }
+function colorFlash(sel){ const colors = {'Na':'#ffd700','Cu':'#4caf50','K':'#b19cd9','Ca':'#ff4500','Li':'#ff5b5b'}; const area=document.getElementById('animArea'); const c = sel.find(s=> colors[s]); if(c){ const div=document.createElement('div'); div.style.position='absolute'; div.style.inset='0'; div.style.background=colors[c]; div.style.opacity='0.10'; area.appendChild(div); setTimeout(()=>div.remove(),800); } }
+function addScore(n){ score+=n; localStorage.setItem('chem_score', score); document.getElementById('score').textContent=score; }
+function playSound(type){ try{ const ctx = new (window.AudioContext || window.webkitAudioContext)(); if(type==='bubbles' || type==='mix'){ for(let i=0;i<3;i++){ const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.setValueAtTime(800+Math.random()*800, ctx.currentTime); g.gain.setValueAtTime(0.002, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5+Math.random()*0.5); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.5+Math.random()*0.5); } } else if(type==='flame'){ const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='triangle'; o.frequency.setValueAtTime(220, ctx.currentTime); g.gain.setValueAtTime(0.01, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.8); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.8); } else if(type==='fail'){ const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='square'; o.frequency.setValueAtTime(200, ctx.currentTime); g.gain.setValueAtTime(0.02, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.4); o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime+0.4); } }catch(e){ console.log('Audio error', e); } }
+function speakText(text){ try{ const u = new SpeechSynthesisUtterance(text); const voices = speechSynthesis.getVoices(); const en = voices.find(v=> v.lang && v.lang.startsWith('en')); if(en) u.voice = en; u.rate = 0.95; speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){ console.log('TTS error', e); } }
+window.addEventListener('load', ()=>{ renderTable(); renderEquipment(); document.getElementById('score').textContent=score; });
+</script>
+</body>
+</html>
